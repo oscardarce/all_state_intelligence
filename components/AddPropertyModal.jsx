@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { LocationSelectFields } from "@/components/LocationSelectFields";
 import { makePropertyFromForm } from "@/lib/properties";
+import { clearFormDraft, getFormDraft, setFormDraft } from "@/lib/formDrafts";
 
 const emptyForm = {
   name: "",
@@ -21,20 +23,31 @@ const emptyForm = {
   notes: "",
 };
 
+const addPropertyDraftKey = "dashboard-add-property:form";
+
 export function AddPropertyModal({ onSave, onCancel }) {
   const [mounted, setMounted] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() => getFormDraft(addPropertyDraftKey, emptyForm));
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    setFormDraft(addPropertyDraftKey, form);
+  }, [form]);
+
   const update = (key) => (event) => {
     setForm((current) => ({ ...current, [key]: event.target.value }));
   };
 
+  const patchLocation = (patch) => {
+    setForm((current) => ({ ...current, ...patch }));
+  };
+
   const submit = (event) => {
     event.preventDefault();
+    clearFormDraft(addPropertyDraftKey);
     onSave(makePropertyFromForm(form));
   };
 
@@ -54,15 +67,8 @@ export function AddPropertyModal({ onSave, onCancel }) {
             />
           </Field>
 
-          <Field label="Province" required>
-            <input required value={form.province} onChange={update("province")} placeholder="San Jose" className="form-field" />
-          </Field>
-          <Field label="Canton" required>
-            <input required value={form.canton} onChange={update("canton")} placeholder="Escazu" className="form-field" />
-          </Field>
-          <Field label="District" required>
-            <input required value={form.district} onChange={update("district")} placeholder="San Rafael" className="form-field" />
-          </Field>
+          <LocationSelectFields values={form} onPatch={patchLocation} />
+
           <Field label="Property Type">
             <PropertyTypeSelect value={form.propertyType} onChange={update("propertyType")} />
           </Field>
@@ -74,13 +80,6 @@ export function AddPropertyModal({ onSave, onCancel }) {
               placeholder="Street, landmark, or broker reference"
               className="form-field"
             />
-          </Field>
-
-          <Field label="Latitude">
-            <input value={form.lat} onChange={update("lat")} type="number" step="any" placeholder="9.9281" className="form-field" />
-          </Field>
-          <Field label="Longitude">
-            <input value={form.lng} onChange={update("lng")} type="number" step="any" placeholder="-84.0907" className="form-field" />
           </Field>
 
           <Field label="Owner Price" required>

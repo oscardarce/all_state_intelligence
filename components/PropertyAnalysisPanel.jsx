@@ -5,7 +5,7 @@ import { formatCurrency, formatNumber } from "@/lib/properties";
 
 export function PropertyAnalysisPanel({ property, comparables, onEdit }) {
   const riskAdjusted = Math.max(0, 100 - property.riskScore);
-  const tags = property.tags || [];
+  const tags = [...new Set((property.tags || []).filter(Boolean))];
   const nearbyServices = property.nearbyServices || [];
   const comparableItems = comparables || [];
 
@@ -35,9 +35,9 @@ export function PropertyAnalysisPanel({ property, comparables, onEdit }) {
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {tags.map((tag) => (
+          {tags.map((tag, index) => (
             <span
-              key={tag}
+              key={`${tag}-${index}`}
               className="rounded-full bg-[#e9e3da] px-2.5 py-1 text-[10px] font-bold text-[#536176]"
             >
               {tag}

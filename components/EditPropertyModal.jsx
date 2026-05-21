@@ -3,21 +3,32 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { LocationSelectFields } from "@/components/LocationSelectFields";
+import { clearFormDraft, getFormDraft, setFormDraft } from "@/lib/formDrafts";
 
 export function EditPropertyModal({ property, onSave, onCancel }) {
+  const draftKey = `dashboard-edit-property:${property.id}`;
   const [mounted, setMounted] = useState(false);
-  const [form, setForm] = useState(() => propertyToForm(property));
+  const [form, setForm] = useState(() => getFormDraft(draftKey, propertyToForm(property)));
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    setForm(propertyToForm(property));
-  }, [property]);
+    setForm(getFormDraft(draftKey, propertyToForm(property)));
+  }, [draftKey, property]);
+
+  useEffect(() => {
+    setFormDraft(draftKey, form);
+  }, [draftKey, form]);
 
   const update = (key) => (event) => {
     setForm((current) => ({ ...current, [key]: event.target.value }));
+  };
+
+  const patchLocation = (patch) => {
+    setForm((current) => ({ ...current, ...patch }));
   };
 
   const submit = (event) => {
@@ -28,6 +39,7 @@ export function EditPropertyModal({ property, onSave, onCancel }) {
     const landSize = Number(form.landSize) || 1;
     const pricePerM2 = Number(form.pricePerM2) || Math.round(ownerPrice / landSize);
 
+    clearFormDraft(draftKey);
     onSave({
       ...property,
       name: form.name.trim() || property.name,
@@ -50,11 +62,11 @@ export function EditPropertyModal({ property, onSave, onCancel }) {
       landUse: form.landUse.trim() || property.landUse,
       propertyType: form.propertyType,
       pricePerM2,
-      tags: [
+      tags: makeTags(
         form.province.trim() || property.province,
         form.canton.trim() || property.canton,
-        form.propertyType,
-      ],
+        form.propertyType
+      ),
       ownerAlignment: buildOwnerAlignment(ownerPrice, marketPrice),
     });
   };
@@ -93,15 +105,8 @@ export function EditPropertyModal({ property, onSave, onCancel }) {
               <input required value={form.name} onChange={update("name")} className="form-field" />
             </Field>
 
-            <Field label="Province" required>
-              <input required value={form.province} onChange={update("province")} className="form-field" />
-            </Field>
-            <Field label="Canton" required>
-              <input required value={form.canton} onChange={update("canton")} className="form-field" />
-            </Field>
-            <Field label="District" required>
-              <input required value={form.district} onChange={update("district")} className="form-field" />
-            </Field>
+            <LocationSelectFields values={form} onPatch={patchLocation} />
+
             <Field label="Property Type">
               <select value={form.propertyType} onChange={update("propertyType")} className="form-field">
                 <option>Urban lot</option>
@@ -115,13 +120,6 @@ export function EditPropertyModal({ property, onSave, onCancel }) {
 
             <Field label="Address" wide>
               <input value={form.address} onChange={update("address")} className="form-field" />
-            </Field>
-
-            <Field label="Latitude">
-              <input value={form.lat} onChange={update("lat")} type="number" step="any" className="form-field" />
-            </Field>
-            <Field label="Longitude">
-              <input value={form.lng} onChange={update("lng")} type="number" step="any" className="form-field" />
             </Field>
 
             <Field label="Owner Price" required>
@@ -164,6 +162,10 @@ export function EditPropertyModal({ property, onSave, onCancel }) {
     </div>,
     document.body
   );
+}
+
+function makeTags(...values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
 }
 
 function propertyToForm(property) {

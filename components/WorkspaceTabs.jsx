@@ -12,6 +12,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
+import { clearFormDraft, getFormDraft, setFormDraft } from "@/lib/formDrafts";
 import { currentNoteDate, formatCurrency, formatNumber } from "@/lib/properties";
 
 const tabs = [
@@ -273,12 +274,17 @@ function Photos({ property, uploads, onUpload }) {
 }
 
 function BrokerComments({ property, onAddNote }) {
-  const [draft, setDraft] = useState("");
+  const draftKey = `dashboard-broker-comment:${property.id}`;
+  const [draft, setDraft] = useState(() => getFormDraft(draftKey, ""));
   const notes = property.notes || [];
 
   useEffect(() => {
-    setDraft("");
-  }, [property.id]);
+    setDraft(getFormDraft(draftKey, ""));
+  }, [draftKey]);
+
+  useEffect(() => {
+    setFormDraft(draftKey, draft);
+  }, [draftKey, draft]);
 
   const saveNote = () => {
     if (!draft.trim()) return;
@@ -287,6 +293,7 @@ function BrokerComments({ property, onAddNote }) {
       date: currentNoteDate(),
       text: draft.trim(),
     });
+    clearFormDraft(draftKey);
     setDraft("");
   };
 

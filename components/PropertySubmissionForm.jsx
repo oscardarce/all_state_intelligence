@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, FileText, ImagePlus, Trash2 } from "lucide-react";
 import { AppNavigation } from "@/components/AppNavigation";
+import { LocationSelectFields } from "@/components/LocationSelectFields";
 import { mockBrokers, selectedBrokerStorageKey } from "@/lib/brokers";
 import { addClientSubmission, formatFileSize, readFileAsDataUrl } from "@/lib/clientSubmissions";
+import { clearFormDraft, getFormDraft, setFormDraft } from "@/lib/formDrafts";
 
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 const maxPhotoCount = 8;
@@ -19,6 +21,8 @@ const emptyForm = {
   province: "",
   canton: "",
   district: "",
+  latitude: "",
+  longitude: "",
   exactAddress: "",
   propertyType: "",
   landSizeM2: "",
@@ -43,10 +47,14 @@ const propertyTypes = [
   "Agricultural land",
 ];
 
+const submissionFormDraftKey = "client-property-submission:form";
+const submissionParcelDraftKey = "client-property-submission:parcel";
+const submissionPhotosDraftKey = "client-property-submission:photos";
+
 export function PropertySubmissionForm() {
-  const [form, setForm] = useState(emptyForm);
-  const [parcelPlan, setParcelPlan] = useState(null);
-  const [propertyPhotos, setPropertyPhotos] = useState([]);
+  const [form, setForm] = useState(() => getFormDraft(submissionFormDraftKey, emptyForm));
+  const [parcelPlan, setParcelPlan] = useState(() => getFormDraft(submissionParcelDraftKey, null));
+  const [propertyPhotos, setPropertyPhotos] = useState(() => getFormDraft(submissionPhotosDraftKey, []));
   const [error, setError] = useState("");
   const [successSubmission, setSuccessSubmission] = useState(null);
 
@@ -62,6 +70,18 @@ export function PropertySubmissionForm() {
     }
   }, []);
 
+  useEffect(() => {
+    setFormDraft(submissionFormDraftKey, form);
+  }, [form]);
+
+  useEffect(() => {
+    setFormDraft(submissionParcelDraftKey, parcelPlan);
+  }, [parcelPlan]);
+
+  useEffect(() => {
+    setFormDraft(submissionPhotosDraftKey, propertyPhotos);
+  }, [propertyPhotos]);
+
   const selectedBroker = useMemo(
     () => mockBrokers.find((broker) => broker.id === form.preferredBrokerId),
     [form.preferredBrokerId]
@@ -70,13 +90,21 @@ export function PropertySubmissionForm() {
   const update = (key) => (event) => {
     const value = event.target.value;
     setForm((current) => ({ ...current, [key]: value }));
-    if (key === "preferredBrokerId" && value) {
+    if (key === "preferredBrokerId") {
       try {
-        window.localStorage.setItem(selectedBrokerStorageKey, value);
+        if (value) {
+          window.localStorage.setItem(selectedBrokerStorageKey, value);
+        } else {
+          window.localStorage.removeItem(selectedBrokerStorageKey);
+        }
       } catch {
         // Broker selection still works for the current form if browser storage is unavailable.
       }
     }
+  };
+
+  const patchLocation = (patch) => {
+    setForm((current) => ({ ...current, ...patch }));
   };
 
   const handleParcelPlan = (event) => {
@@ -177,6 +205,12 @@ export function PropertySubmissionForm() {
         province: form.province.trim(),
         canton: form.canton.trim(),
         district: form.district.trim(),
+        latitude: form.latitude,
+        longitude: form.longitude,
+        coordinates: {
+          lat: Number(form.latitude) || null,
+          lng: Number(form.longitude) || null,
+        },
         exactAddress: form.exactAddress.trim(),
         propertyType: form.propertyType,
         landSizeM2: form.landSizeM2,
@@ -196,6 +230,9 @@ export function PropertySubmissionForm() {
 
     setSuccessSubmission(submission);
     setError(submission.storageWarning || "");
+    clearFormDraft(submissionFormDraftKey);
+    clearFormDraft(submissionParcelDraftKey);
+    clearFormDraft(submissionPhotosDraftKey);
     setForm({ ...emptyForm, preferredBrokerId: form.preferredBrokerId });
     setParcelPlan(null);
     setPropertyPhotos([]);
@@ -286,15 +323,13 @@ export function PropertySubmissionForm() {
               <Field label="Property title" required wide>
                 <input value={form.propertyTitle} onChange={update("propertyTitle")} className="form-field" />
               </Field>
-              <Field label="Province" required>
-                <input value={form.province} onChange={update("province")} className="form-field" />
-              </Field>
-              <Field label="Canton" required>
-                <input value={form.canton} onChange={update("canton")} className="form-field" />
-              </Field>
-              <Field label="District" required>
-                <input value={form.district} onChange={update("district")} className="form-field" />
-              </Field>
+              <LocationSelectFields
+                values={form}
+                onPatch={patchLocation}
+                latKey="latitude"
+                lngKey="longitude"
+              />
+
               <Field label="Property type" required>
                 <select value={form.propertyType} onChange={update("propertyType")} className="form-field">
                   <option value="">Select property type</option>

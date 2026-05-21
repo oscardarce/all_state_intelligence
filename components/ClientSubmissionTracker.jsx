@@ -6,6 +6,7 @@ import { Building2, CalendarDays, FileText, ImageIcon, UserRound } from "lucide-
 import { AppNavigation } from "@/components/AppNavigation";
 import { findBrokerById } from "@/lib/brokers";
 import { formatFileSize, getClientSubmissions } from "@/lib/clientSubmissions";
+import { getDistrictLocation } from "@/lib/locations";
 import { seededPropertyRequests } from "@/lib/propertyRequests";
 
 export function ClientSubmissionTracker() {
@@ -116,6 +117,7 @@ function SubmissionCard({ submission }) {
           year: "numeric",
         })
       : "Date pending";
+  const coordinateLabel = formatSubmissionCoordinates(property);
 
   return (
     <article className="overflow-hidden rounded-lg border border-[#e2ddd5] bg-[#fffdf9] shadow-workspace">
@@ -149,6 +151,7 @@ function SubmissionCard({ submission }) {
             <DataItem label="Water" value={property.waterAvailability || "Pending"} />
             <DataItem label="Electricity" value={property.electricityAvailability || "Pending"} />
             <DataItem label="Road access" value={property.roadAccess || "Pending"} wide />
+            <DataItem label="Coordinates" value={coordinateLabel} wide />
             <DataItem label="Exact address" value={property.exactAddress || "Pending"} wide />
           </div>
 
@@ -219,6 +222,28 @@ function SubmissionCard({ submission }) {
       </div>
     </article>
   );
+}
+
+function formatSubmissionCoordinates(property) {
+  const lat = firstPresent(property.coordinates?.lat, property.latitude, property.lat);
+  const lng = firstPresent(property.coordinates?.lng, property.longitude, property.lng);
+  const directLat = Number(lat);
+  const directLng = Number(lng);
+
+  if (Number.isFinite(directLat) && Number.isFinite(directLng)) {
+    return `${directLat.toFixed(5)}, ${directLng.toFixed(5)}`;
+  }
+
+  const districtLocation = getDistrictLocation(property.province, property.canton, property.district);
+  if (districtLocation) {
+    return `${districtLocation.lat.toFixed(5)}, ${districtLocation.lng.toFixed(5)}`;
+  }
+
+  return "Pending";
+}
+
+function firstPresent(...values) {
+  return values.find((value) => String(value ?? "").trim() !== "");
 }
 
 function DataItem({ label, value, wide = false }) {
