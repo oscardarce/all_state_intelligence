@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { MainMenu } from "@/components/MainMenu";
 
 export default function HomePage() {
-  redirect("/dashboard");
+  return <MainMenu />;
 }

@@ -1,7 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { Building2, ChevronDown, Home, Plus, RotateCcw } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  ClipboardList,
+  Home,
+  LayoutDashboard,
+  Plus,
+  RotateCcw,
+  Users,
+} from "lucide-react";
+
+const dashboardNavItems = [
+  { href: "/", label: "Home", icon: Home },
+  { href: "/submit-property", label: "Submit", icon: ClipboardList },
+  { href: "/brokers", label: "Brokers", icon: Users },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+];
 
 export function Navbar({
   filters,
@@ -70,6 +86,19 @@ export function Navbar({
         {propertyCount} {propertyCount === 1 ? "property" : "properties"}
       </div>
 
+      <nav className="hidden shrink-0 items-center gap-1 xl:flex">
+        {dashboardNavItems.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-bold text-[#66748a] transition hover:bg-[#f5f1eb] hover:text-teal"
+          >
+            <Icon size={13} />
+            {label}
+          </Link>
+        ))}
+      </nav>
+
       <button
         type="button"
         onClick={onAddProperty}
@@ -78,14 +107,6 @@ export function Navbar({
         <Plus size={14} />
         Add Property
       </button>
-
-      <Link
-        href="/"
-        className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md px-2 text-[12px] font-semibold text-[#8a98ad] transition hover:bg-[#f5f1eb] hover:text-teal"
-      >
-        <Home size={13} />
-        <span className="hidden lg:inline">Home</span>
-      </Link>
     </header>
   );
 }
