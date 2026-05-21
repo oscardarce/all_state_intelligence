@@ -5,7 +5,7 @@ import { formatCurrency } from "@/lib/properties";
 
 export function PropertyList({ properties, selectedId, onSelectProperty }) {
   return (
-    <aside className="flex w-[272px] shrink-0 flex-col overflow-hidden border-r border-[#e2ddd5] bg-[#f7f3ed]">
+    <aside className="flex h-full min-w-0 flex-col overflow-hidden border-r border-[#e2ddd5] bg-[#f7f3ed]">
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-[#e2ddd5] px-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8796ad]">
           Properties

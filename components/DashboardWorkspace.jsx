@@ -122,20 +122,25 @@ export function DashboardWorkspace() {
         onAddProperty={() => setShowAddModal(true)}
       />
 
-      <div className="flex min-h-0 flex-1">
+      <div className="grid min-h-0 flex-1 grid-cols-[clamp(232px,14vw,260px)_minmax(0,1fr)_clamp(360px,22vw,400px)] overflow-hidden">
         <PropertyList
           properties={filteredProperties}
           selectedId={selectedProperty.id}
           onSelectProperty={selectProperty}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="grid min-w-0 grid-rows-[minmax(0,1fr)_286px] overflow-hidden">
           <PropertyMap
             properties={properties}
             selectedProperty={selectedProperty}
             visiblePropertyIds={visiblePropertyIds}
             comparables={comparables}
             onSelectProperty={selectProperty}
+          />
+          <WorkspaceTabs
+            property={selectedProperty}
+            comparables={comparables}
+            onAddNote={addNote}
           />
         </div>
 
@@ -145,12 +150,6 @@ export function DashboardWorkspace() {
           onEdit={() => setShowEditModal(true)}
         />
       </div>
-
-      <WorkspaceTabs
-        property={selectedProperty}
-        comparables={comparables}
-        onAddNote={addNote}
-      />
 
       {showAddModal ? (
         <AddPropertyModal onSave={addProperty} onCancel={() => setShowAddModal(false)} />

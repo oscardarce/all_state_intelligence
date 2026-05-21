@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -10,6 +10,7 @@ import {
   Layers,
   MapIcon,
   Plus,
+  X,
 } from "lucide-react";
 import { currentNoteDate, formatCurrency, formatNumber } from "@/lib/properties";
 
@@ -23,8 +24,54 @@ const tabs = [
   { id: "risk", label: "Risk Analysis", icon: AlertTriangle },
 ];
 
+const photoSlots = [
+  { id: "satellite", title: "Satellite view", helper: "Site context" },
+  { id: "frontage", title: "Street frontage", helper: "Road-facing view" },
+  { id: "adjacent", title: "Adjacent lots", helper: "Neighbor context" },
+  { id: "access", title: "Access road", helper: "Entry conditions" },
+  { id: "additional", title: "Additional photo", helper: "Optional upload" },
+];
+
+const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+
 export function WorkspaceTabs({ property, comparables, onAddNote }) {
   const [activeTab, setActiveTab] = useState("comments");
+  const [photoUploadsByProperty, setPhotoUploadsByProperty] = useState({});
+  const objectUrlsRef = useRef(new Set());
+
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      objectUrlsRef.current.clear();
+    };
+  }, []);
+
+  const savePhotoUpload = (slotId, file) => {
+    const previewUrl = URL.createObjectURL(file);
+    const previousUpload = photoUploadsByProperty[property.id]?.[slotId];
+
+    objectUrlsRef.current.add(previewUrl);
+    if (previousUpload?.url) {
+      URL.revokeObjectURL(previousUpload.url);
+      objectUrlsRef.current.delete(previousUpload.url);
+    }
+
+    setPhotoUploadsByProperty((current) => {
+      const propertyUploads = current[property.id] || {};
+
+      return {
+        ...current,
+        [property.id]: {
+          ...propertyUploads,
+          [slotId]: {
+            fileName: file.name,
+            type: file.type,
+            url: previewUrl,
+          },
+        },
+      };
+    });
+  };
 
   return (
     <section className="flex h-[286px] shrink-0 flex-col border-t border-[#e2ddd5] bg-[#fffdf9]">
@@ -51,7 +98,13 @@ export function WorkspaceTabs({ property, comparables, onAddNote }) {
       </div>
 
       <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto">
-        {activeTab === "photos" ? <Photos property={property} /> : null}
+        {activeTab === "photos" ? (
+          <Photos
+            property={property}
+            uploads={photoUploadsByProperty[property.id] || {}}
+            onUpload={savePhotoUpload}
+          />
+        ) : null}
         {activeTab === "comments" ? (
           <BrokerComments property={property} onAddNote={onAddNote} />
         ) : null}
@@ -65,40 +118,157 @@ export function WorkspaceTabs({ property, comparables, onAddNote }) {
   );
 }
 
-function Photos({ property }) {
+function Photos({ property, uploads, onUpload }) {
+  const fileInputRef = useRef(null);
+  const [activeSlotId, setActiveSlotId] = useState(null);
+  const [previewSlotId, setPreviewSlotId] = useState(null);
+  const [error, setError] = useState("");
+
+  const previewSlot = photoSlots.find((slot) => slot.id === previewSlotId);
+  const previewUpload = previewSlot ? uploads[previewSlot.id] : null;
+
+  const openFilePicker = (slotId) => {
+    setActiveSlotId(slotId);
+    setError("");
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !activeSlotId) return;
+
+    if (!file.type.startsWith("image/") || !allowedImageTypes.includes(file.type)) {
+      setError("Please upload a JPG, PNG, or WEBP image.");
+      return;
+    }
+
+    onUpload(activeSlotId, file);
+    setError("");
+  };
+
   return (
-    <div className="flex gap-3 overflow-x-auto p-4">
-      {property.photos.map((photo, index) => (
+    <>
+      <div className="p-4">
+        {error ? (
+          <div className="mb-3 rounded-md border border-[rgba(223,106,60,0.28)] bg-[rgba(223,106,60,0.07)] px-3 py-2 text-[12px] font-semibold text-[#9a4c2d]">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3 overflow-x-auto">
+          {photoSlots.map((slot) => {
+            const upload = uploads[slot.id];
+
+            return (
+              <article
+                key={slot.id}
+                className="relative h-36 w-48 shrink-0 overflow-hidden rounded-lg border border-[#e2ddd5] bg-[#f3efe8] shadow-sm"
+              >
+                {upload ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewSlotId(slot.id)}
+                      className="group h-full w-full text-left"
+                      aria-label={`Preview ${slot.title}`}
+                    >
+                      <img
+                        src={upload.url}
+                        alt={`${slot.title} for ${property.name}`}
+                        className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.03]"
+                      />
+                      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[rgba(31,42,61,0.86)] to-transparent p-3">
+                        <span className="block text-[12px] font-extrabold text-white">
+                          {slot.title}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-[#cde9e5]">
+                          {upload.fileName}
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openFilePicker(slot.id)}
+                      className="absolute right-2 top-2 rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[10px] font-extrabold text-teal shadow-sm transition hover:bg-[#edf8f6]"
+                    >
+                      Change photo
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openFilePicker(slot.id)}
+                    className="relative flex h-full w-full flex-col items-center justify-center text-center transition hover:bg-[rgba(15,148,136,0.06)]"
+                  >
+                    <span className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,148,136,0.11),rgba(31,42,61,0.03))]" />
+                    <span className="relative mx-auto grid h-9 w-9 place-items-center rounded-full bg-white text-teal shadow-sm">
+                      {slot.id === "additional" ? <Plus size={18} /> : <Camera size={16} />}
+                    </span>
+                    <span className="relative mt-2 text-[12px] font-extrabold text-ink">
+                      {slot.title}
+                    </span>
+                    <span className="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8d98aa]">
+                      {slot.helper}
+                    </span>
+                  </button>
+                )}
+              </article>
+            );
+          })}
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+      </div>
+
+      {previewSlot && previewUpload ? (
         <div
-          key={photo}
-          className="relative h-36 w-48 shrink-0 overflow-hidden rounded-lg border border-[#e2ddd5] bg-[#f3efe8]"
+          className="fixed inset-0 z-[9999] grid place-items-center bg-[rgba(31,42,61,0.68)] px-4 py-6"
+          onClick={() => setPreviewSlotId(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${previewSlot.title} preview`}
         >
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,148,136,0.11),rgba(31,42,61,0.03))]" />
-          <div className="absolute inset-0 grid place-items-center">
-            <div className="text-center">
-              <div className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-white text-teal shadow-sm">
-                <Camera size={16} />
+          <div
+            className="max-h-full w-full max-w-4xl overflow-hidden rounded-lg border border-[#e2ddd5] bg-[#fffdf9] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[#e2ddd5] bg-[#f7f3ed] px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-teal">
+                  Photo preview
+                </p>
+                <h2 className="truncate text-[15px] font-extrabold text-ink">
+                  {previewSlot.title}
+                </h2>
               </div>
-              <p className="mt-2 text-[12px] font-extrabold text-ink">{photo}</p>
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8d98aa]">
-                {index === 0 ? "Satellite active" : "Upload placeholder"}
-              </p>
+              <button
+                type="button"
+                onClick={() => setPreviewSlotId(null)}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#d8d1c8] bg-white text-[#536176] transition hover:border-teal hover:text-teal"
+                aria-label="Close photo preview"
+              >
+                <X size={17} />
+              </button>
+            </div>
+            <div className="bg-[#101827] p-3">
+              <img
+                src={previewUpload.url}
+                alt={`${previewSlot.title} for ${property.name}`}
+                className="mx-auto max-h-[72vh] w-auto max-w-full rounded-md object-contain"
+              />
             </div>
           </div>
         </div>
-      ))}
-
-      <button
-        type="button"
-        className="flex h-36 w-48 shrink-0 flex-col items-center justify-center rounded-lg border border-dashed border-[rgba(15,148,136,0.35)] bg-[rgba(15,148,136,0.05)] text-teal transition hover:bg-[rgba(15,148,136,0.09)]"
-      >
-        <Plus size={18} />
-        <span className="mt-2 text-[12px] font-extrabold">Upload Photo</span>
-        <span className="mt-1 text-[10px] font-semibold text-[#8d98aa]">
-          Placeholder only
-        </span>
-      </button>
-    </div>
+      ) : null}
+    </>
   );
 }
 

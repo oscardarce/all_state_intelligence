@@ -7,7 +7,7 @@ export function PropertyAnalysisPanel({ property, comparables, onEdit }) {
   const riskAdjusted = Math.max(0, 100 - property.riskScore);
 
   return (
-    <aside className="flex h-full w-[430px] shrink-0 flex-col overflow-hidden border-l border-[#e2ddd5] bg-[#fffdf9]">
+    <aside className="flex h-full min-w-0 flex-col overflow-hidden border-l border-[#e2ddd5] bg-[#fffdf9]">
       <div className="shrink-0 border-b border-[#e2ddd5] bg-[#f7f3ed] p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
