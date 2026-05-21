@@ -6,12 +6,17 @@ import { Building2, CalendarDays, FileText, ImageIcon, UserRound } from "lucide-
 import { AppNavigation } from "@/components/AppNavigation";
 import { findBrokerById } from "@/lib/brokers";
 import { formatFileSize, getClientSubmissions } from "@/lib/clientSubmissions";
+import { seededPropertyRequests } from "@/lib/propertyRequests";
 
 export function ClientSubmissionTracker() {
   const [submissions, setSubmissions] = useState([]);
 
   useEffect(() => {
-    setSubmissions(getClientSubmissions());
+    setSubmissions(
+      [...getClientSubmissions(), ...seededPropertyRequests].filter(
+        (submission) => submission?.property && submission?.owner
+      )
+    );
   }, []);
 
   const latestSubmission = submissions[0];
@@ -96,15 +101,21 @@ function EmptyState() {
 }
 
 function SubmissionCard({ submission }) {
+  const owner = submission.owner || {};
+  const property = submission.property || {};
   const broker = useMemo(
     () => findBrokerById(submission.preferredBrokerId),
     [submission.preferredBrokerId]
   );
-  const submittedDate = new Date(submission.submittedAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const submittedAt = submission.submittedAt ? new Date(submission.submittedAt) : null;
+  const submittedDate =
+    submittedAt && !Number.isNaN(submittedAt.getTime())
+      ? submittedAt.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "Date pending";
 
   return (
     <article className="overflow-hidden rounded-lg border border-[#e2ddd5] bg-[#fffdf9] shadow-workspace">
@@ -114,10 +125,10 @@ function SubmissionCard({ submission }) {
             {submission.status}
           </p>
           <h2 className="mt-1 truncate text-[21px] font-extrabold text-ink">
-            {submission.property.title}
+            {property.title || "Untitled property"}
           </h2>
           <p className="mt-1 text-[12px] text-muted">
-            {submission.property.district}, {submission.property.canton}, {submission.property.province}
+            {[property.district, property.canton, property.province].filter(Boolean).join(", ") || "Location pending"}
           </p>
         </div>
         <p className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-[#66748a]">
@@ -129,24 +140,24 @@ function SubmissionCard({ submission }) {
       <div className="grid gap-5 p-5 lg:grid-cols-[1fr_260px]">
         <div>
           <div className="grid gap-2 sm:grid-cols-2">
-            <DataItem label="Owner" value={submission.owner.fullName} />
-            <DataItem label="Contact" value={submission.owner.email} />
-            <DataItem label="Property type" value={submission.property.propertyType} />
-            <DataItem label="Land size" value={`${submission.property.landSizeM2} m2`} />
-            <DataItem label="Owner asking price" value={`$${Number(submission.property.ownerAskingPrice || 0).toLocaleString("en-US")}`} />
-            <DataItem label="Estimated price / m2" value={submission.property.estimatedPricePerM2 ? `$${Number(submission.property.estimatedPricePerM2).toLocaleString("en-US")}` : "Pending"} />
-            <DataItem label="Water" value={submission.property.waterAvailability || "Pending"} />
-            <DataItem label="Electricity" value={submission.property.electricityAvailability || "Pending"} />
-            <DataItem label="Road access" value={submission.property.roadAccess || "Pending"} wide />
-            <DataItem label="Exact address" value={submission.property.exactAddress} wide />
+            <DataItem label="Owner" value={owner.fullName || "Pending"} />
+            <DataItem label="Contact" value={owner.email || "Pending"} />
+            <DataItem label="Property type" value={property.propertyType || "Pending"} />
+            <DataItem label="Land size" value={property.landSizeM2 ? `${property.landSizeM2} m2` : "Pending"} />
+            <DataItem label="Owner asking price" value={`$${Number(property.ownerAskingPrice || 0).toLocaleString("en-US")}`} />
+            <DataItem label="Estimated price / m2" value={property.estimatedPricePerM2 ? `$${Number(property.estimatedPricePerM2).toLocaleString("en-US")}` : "Pending"} />
+            <DataItem label="Water" value={property.waterAvailability || "Pending"} />
+            <DataItem label="Electricity" value={property.electricityAvailability || "Pending"} />
+            <DataItem label="Road access" value={property.roadAccess || "Pending"} wide />
+            <DataItem label="Exact address" value={property.exactAddress || "Pending"} wide />
           </div>
 
-          {submission.property.notes ? (
+          {property.notes ? (
             <div className="mt-3 rounded-md border border-[#e2ddd5] bg-[#f8f5ef] p-3">
               <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#8a98ad]">
                 Notes
               </p>
-              <p className="mt-1 text-[13px] leading-6 text-[#344155]">{submission.property.notes}</p>
+              <p className="mt-1 text-[13px] leading-6 text-[#344155]">{property.notes}</p>
             </div>
           ) : null}
         </div>
@@ -189,9 +200,9 @@ function SubmissionCard({ submission }) {
               <ImageIcon size={13} className="text-teal" />
               Photos
             </p>
-            {submission.photos?.length ? (
+            {submission.photos?.some((photo) => photo.dataUrl) ? (
               <div className="mt-2 grid grid-cols-3 gap-1.5">
-                {submission.photos.slice(0, 6).map((photo, index) => (
+                {submission.photos.filter((photo) => photo.dataUrl).slice(0, 6).map((photo, index) => (
                   <img
                     key={`${photo.name}-${index}`}
                     src={photo.dataUrl}
@@ -216,7 +227,7 @@ function DataItem({ label, value, wide = false }) {
       <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#8a98ad]">
         {label}
       </p>
-      <p className="mt-1 text-[13px] font-bold leading-5 text-ink">{value}</p>
+      <p className="mt-1 text-[13px] font-bold leading-5 text-ink">{value || "Pending"}</p>
     </div>
   );
 }

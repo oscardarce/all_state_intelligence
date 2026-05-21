@@ -20,7 +20,6 @@ export function PropertyMap({
   const [ready, setReady] = useState(false);
 
   const visibleIds = useMemo(() => new Set(visiblePropertyIds), [visiblePropertyIds]);
-  const comparableIds = useMemo(() => new Set(comparables.map((item) => item.id)), [comparables]);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +78,7 @@ export function PropertyMap({
 
   useEffect(() => {
     if (!ready || !mapRef.current || !leafletRef.current || !layerGroupRef.current) return;
+    if (!selectedProperty?.coordinates?.lat || !selectedProperty?.coordinates?.lng) return;
 
     const L = leafletRef.current;
     const group = layerGroupRef.current;
@@ -109,22 +109,28 @@ export function PropertyMap({
       interactive: false,
     }).addTo(group);
 
-    const renderableProperties = properties.filter(
-      (property) => visibleIds.has(property.id) || property.id === selectedProperty.id
-    );
+    const renderableProperties = properties.filter((property) => visibleIds.has(property.id));
 
     renderableProperties.forEach((property) => {
-      const isSelected = property.id === selectedProperty.id;
-      const isComparable = comparableIds.has(property.id);
+      if (!property.coordinates?.lat || !property.coordinates?.lng) return;
 
-      if (!isSelected && !isComparable) return;
+      const isSelected = property.id === selectedProperty.id;
 
       const marker = L.marker([property.coordinates.lat, property.coordinates.lng], {
-        icon: buildMarkerIcon(L, property, { isSelected, isComparable }),
+        icon: buildMarkerIcon(L, property, { isSelected, isComparable: false }),
         zIndexOffset: isSelected ? 1000 : 250,
       }).addTo(group);
 
       marker.on("click", () => onSelectProperty(property.id));
+    });
+
+    comparables.forEach((comparable) => {
+      if (!comparable.coordinates?.lat || !comparable.coordinates?.lng) return;
+
+      L.marker([comparable.coordinates.lat, comparable.coordinates.lng], {
+        icon: buildMarkerIcon(L, comparable, { isSelected: false, isComparable: true }),
+        zIndexOffset: 150,
+      }).addTo(group);
     });
 
     mapRef.current.flyTo(selectedPosition, DEFAULT_ZOOM, {
@@ -137,7 +143,7 @@ export function PropertyMap({
     properties,
     selectedProperty,
     visibleIds,
-    comparableIds,
+    comparables,
     onSelectProperty,
   ]);
 
@@ -146,15 +152,20 @@ export function PropertyMap({
     const L = leafletRef.current;
     const coordinates = properties
       .filter((property) => visibleIds.has(property.id))
+      .filter((property) => property.coordinates?.lat && property.coordinates?.lng)
       .map((property) => [property.coordinates.lat, property.coordinates.lng]);
+    const comparableCoordinates = comparables
+      .filter((comparable) => comparable.coordinates?.lat && comparable.coordinates?.lng)
+      .map((comparable) => [comparable.coordinates.lat, comparable.coordinates.lng]);
+    const allCoordinates = [...coordinates, ...comparableCoordinates];
 
-    if (coordinates.length === 0) return;
-    if (coordinates.length === 1) {
-      mapRef.current.flyTo(coordinates[0], DEFAULT_ZOOM, { animate: true, duration: 0.8 });
+    if (allCoordinates.length === 0) return;
+    if (allCoordinates.length === 1) {
+      mapRef.current.flyTo(allCoordinates[0], DEFAULT_ZOOM, { animate: true, duration: 0.8 });
       return;
     }
 
-    mapRef.current.flyToBounds(L.latLngBounds(coordinates).pad(0.18), {
+    mapRef.current.flyToBounds(L.latLngBounds(allCoordinates).pad(0.18), {
       animate: true,
       duration: 0.9,
     });
@@ -217,20 +228,22 @@ function buildParcelPolygon(property) {
 }
 
 function getAspectRatio(propertyType) {
-  if (propertyType.includes("Industrial") || propertyType.includes("Development")) return 1.75;
-  if (propertyType.includes("Residential")) return 0.9;
-  if (propertyType.includes("Tourism")) return 1.2;
+  const type = String(propertyType || "");
+  if (type.includes("Industrial") || type.includes("Development")) return 1.75;
+  if (type.includes("Residential")) return 0.9;
+  if (type.includes("Tourism")) return 1.2;
   return 1.35;
 }
 
 function buildMarkerIcon(L, property, { isSelected, isComparable }) {
   const accent = isSelected ? "#df6a3c" : "#14b8a6";
   const ring = isSelected ? "rgba(223,106,60,0.26)" : "rgba(20,184,166,0.22)";
-  const title = escapeHtml(property.name.split(" ").slice(0, 3).join(" "));
+  const displayName = property.name || property.title || "Property";
+  const title = escapeHtml(displayName.split(" ").slice(0, 3).join(" "));
   const label = isSelected
     ? `${property.investmentScore}`
     : `${formatCurrency(property.pricePerM2)}/m2`;
-  const sublabel = isSelected ? "AI score" : isComparable ? "Comparable" : "Marker";
+  const sublabel = isSelected ? "AI score" : isComparable ? "Comparable" : "Active";
   const size = isSelected ? 42 : 34;
 
   return L.divIcon({

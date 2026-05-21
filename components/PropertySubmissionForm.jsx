@@ -8,6 +8,8 @@ import { mockBrokers, selectedBrokerStorageKey } from "@/lib/brokers";
 import { addClientSubmission, formatFileSize, readFileAsDataUrl } from "@/lib/clientSubmissions";
 
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+const maxPhotoCount = 8;
+const maxPhotoBytes = 2.5 * 1024 * 1024;
 
 const emptyForm = {
   ownerFullName: "",
@@ -49,7 +51,12 @@ export function PropertySubmissionForm() {
   const [successSubmission, setSuccessSubmission] = useState(null);
 
   useEffect(() => {
-    const selectedBrokerId = window.localStorage.getItem(selectedBrokerStorageKey) || "";
+    let selectedBrokerId = "";
+    try {
+      selectedBrokerId = window.localStorage.getItem(selectedBrokerStorageKey) || "";
+    } catch {
+      selectedBrokerId = "";
+    }
     if (selectedBrokerId) {
       setForm((current) => ({ ...current, preferredBrokerId: selectedBrokerId }));
     }
@@ -64,7 +71,11 @@ export function PropertySubmissionForm() {
     const value = event.target.value;
     setForm((current) => ({ ...current, [key]: value }));
     if (key === "preferredBrokerId" && value) {
-      window.localStorage.setItem(selectedBrokerStorageKey, value);
+      try {
+        window.localStorage.setItem(selectedBrokerStorageKey, value);
+      } catch {
+        // Broker selection still works for the current form if browser storage is unavailable.
+      }
     }
   };
 
@@ -93,6 +104,17 @@ export function PropertySubmissionForm() {
       return;
     }
 
+    const oversizedFile = files.find((file) => file.size > maxPhotoBytes);
+    if (oversizedFile) {
+      setError("Each property photo must be 2.5 MB or smaller for this MVP.");
+      return;
+    }
+
+    if (propertyPhotos.length + files.length > maxPhotoCount) {
+      setError(`Please upload up to ${maxPhotoCount} property photos for this MVP.`);
+      return;
+    }
+
     try {
       const nextPhotos = await Promise.all(
         files.map(async (file) => ({
@@ -102,7 +124,7 @@ export function PropertySubmissionForm() {
           dataUrl: await readFileAsDataUrl(file),
         }))
       );
-      setPropertyPhotos((current) => [...current, ...nextPhotos].slice(0, 8));
+      setPropertyPhotos((current) => [...current, ...nextPhotos].slice(0, maxPhotoCount));
       setError("");
     } catch {
       setError("One or more images could not be previewed. Please try again.");
@@ -173,7 +195,7 @@ export function PropertySubmissionForm() {
     });
 
     setSuccessSubmission(submission);
-    setError("");
+    setError(submission.storageWarning || "");
     setForm({ ...emptyForm, preferredBrokerId: form.preferredBrokerId });
     setParcelPlan(null);
     setPropertyPhotos([]);

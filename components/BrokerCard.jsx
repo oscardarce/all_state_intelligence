@@ -37,8 +37,17 @@ export function BrokerCard({ broker, onSelect, onViewProfile, selected = false }
         <p className="mt-1 text-[13px] leading-6 text-[#344155]">{broker.specialty}</p>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <MiniMetric label="Experience" value={broker.experience} />
+          <MiniMetric label="Experience" value={formatExperience(broker)} />
           <MiniMetric label="Managed" value={`${broker.propertiesManaged} properties`} />
+        </div>
+
+        <div className="mt-3 rounded-md border border-[#e2ddd5] bg-[#f8f5ef] px-3 py-2">
+          <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#8a98ad]">
+            Territory
+          </p>
+          <p className="mt-1 truncate text-[12px] font-bold text-ink">
+            {formatTerritory(broker)}
+          </p>
         </div>
 
         <div className="mt-4 space-y-2 text-[12px] text-muted">
@@ -71,6 +80,14 @@ export function BrokerCard({ broker, onSelect, onViewProfile, selected = false }
       </div>
     </article>
   );
+}
+
+function formatExperience(broker) {
+  return broker.yearsExperience ? `${broker.yearsExperience} years` : broker.experience || "Pending";
+}
+
+function formatTerritory(broker) {
+  return [broker.district, broker.canton, broker.province].filter(Boolean).join(", ") || "Territory pending";
 }
 
 function MiniMetric({ label, value }) {

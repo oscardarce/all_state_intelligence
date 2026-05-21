@@ -31,10 +31,13 @@ export function EditPropertyModal({ property, onSave, onCancel }) {
     onSave({
       ...property,
       name: form.name.trim() || property.name,
+      title: form.name.trim() || property.title || property.name,
       province: form.province.trim() || property.province,
       canton: form.canton.trim() || property.canton,
       district: form.district.trim() || property.district,
       address: form.address.trim() || property.address,
+      latitude: Number(form.lat) || property.coordinates.lat,
+      longitude: Number(form.lng) || property.coordinates.lng,
       coordinates: {
         lat: Number(form.lat) || property.coordinates.lat,
         lng: Number(form.lng) || property.coordinates.lng,
@@ -43,6 +46,7 @@ export function EditPropertyModal({ property, onSave, onCancel }) {
       marketPrice,
       appraisalPrice,
       landSize,
+      landSizeM2: landSize,
       landUse: form.landUse.trim() || property.landUse,
       propertyType: form.propertyType,
       pricePerM2,

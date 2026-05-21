@@ -274,6 +274,7 @@ function Photos({ property, uploads, onUpload }) {
 
 function BrokerComments({ property, onAddNote }) {
   const [draft, setDraft] = useState("");
+  const notes = property.notes || [];
 
   useEffect(() => {
     setDraft("");
@@ -292,12 +293,12 @@ function BrokerComments({ property, onAddNote }) {
   return (
     <div className="flex flex-col gap-3 p-4">
       <div className="space-y-2">
-        {property.notes.length === 0 ? (
+        {notes.length === 0 ? (
           <div className="rounded-md border border-dashed border-[#d8d1c8] bg-[#f8f5ef] p-4 text-[13px] text-muted">
             No broker comments yet. Add the first site observation below.
           </div>
         ) : (
-          property.notes.map((note, index) => (
+          notes.map((note, index) => (
             <article
               key={`${note.author}-${note.date}-${index}`}
               className="rounded-md border border-[#e2ddd5] bg-[#f8f5ef] p-3"
@@ -336,6 +337,8 @@ function BrokerComments({ property, onAddNote }) {
 }
 
 function ParcelPlan({ property }) {
+  const parcel = property.parcel || {};
+
   return (
     <div className="grid gap-4 p-4 lg:grid-cols-[180px_1fr]">
       <div className="grid h-40 place-items-center rounded-lg border border-[#e2ddd5] bg-[#f8f5ef]">
@@ -367,11 +370,11 @@ function ParcelPlan({ property }) {
           Cadastral Details
         </p>
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <SmallMetric label="Registry ID" value={property.parcel.registryId} />
+          <SmallMetric label="Registry ID" value={parcel.registryId || "Pending"} />
           <SmallMetric label="Registry Area" value={`${formatNumber(property.landSize)} m2`} />
-          <SmallMetric label="Frontage" value={property.parcel.frontage} />
-          <SmallMetric label="Depth" value={property.parcel.depth} />
-          <SmallMetric label="Coverage" value={property.parcel.coverage} wide />
+          <SmallMetric label="Frontage" value={parcel.frontage || "Pending"} />
+          <SmallMetric label="Depth" value={parcel.depth || "Pending"} />
+          <SmallMetric label="Coverage" value={parcel.coverage || "Pending"} wide />
           <SmallMetric label="Land Use" value={property.landUse} wide />
         </div>
       </div>
@@ -380,6 +383,7 @@ function ParcelPlan({ property }) {
 }
 
 function Infrastructure({ property }) {
+  const nearbyServices = property.nearbyServices || [];
   const metrics = [
     ["Infrastructure", property.infrastructureScore],
     ["Liquidity", property.liquidityScore],
@@ -396,7 +400,7 @@ function Infrastructure({ property }) {
       </div>
 
       <div className="grid gap-2 lg:grid-cols-2">
-        {property.nearbyServices.map((service) => (
+        {nearbyServices.map((service) => (
           <div
             key={service.name}
             className="flex items-center gap-3 rounded-md border border-[#e2ddd5] bg-[#f8f5ef] px-3 py-2"
@@ -415,9 +419,11 @@ function Infrastructure({ property }) {
 }
 
 function Comparables({ comparables }) {
+  const comparableItems = comparables || [];
+
   return (
     <div className="flex gap-3 overflow-x-auto p-4">
-      {comparables.map((comparable) => (
+      {comparableItems.map((comparable) => (
         <article
           key={comparable.id}
           className="w-64 shrink-0 rounded-md border border-[#e2ddd5] bg-[#f8f5ef] p-3"
@@ -444,6 +450,8 @@ function Comparables({ comparables }) {
 }
 
 function Zoning({ property }) {
+  const zoning = property.zoning || {};
+
   return (
     <div className="grid gap-3 p-4 lg:grid-cols-3">
       <div className="rounded-md border border-[rgba(15,148,136,0.22)] bg-[rgba(15,148,136,0.06)] p-3">
@@ -451,18 +459,19 @@ function Zoning({ property }) {
           Classification
         </p>
         <p className="mt-2 text-[14px] font-extrabold text-ink">
-          {property.zoning.classification}
+          {zoning.classification || "Pending classification"}
         </p>
         <p className="mt-1 text-[11px] text-muted">Municipality of {property.canton}</p>
       </div>
 
-      <ListBlock title="Permitted Uses" color="#0f9488" items={property.zoning.permitted} />
-      <ListBlock title="Restrictions" color="#df6a3c" items={property.zoning.restrictions} />
+      <ListBlock title="Permitted Uses" color="#0f9488" items={zoning.permitted || []} />
+      <ListBlock title="Restrictions" color="#df6a3c" items={zoning.restrictions || []} />
     </div>
   );
 }
 
 function RiskAnalysis({ property }) {
+  const risks = property.risks || [];
   const level =
     property.riskScore < 30 ? "Low" : property.riskScore < 45 ? "Moderate" : "Elevated";
   const color = property.riskScore < 30 ? "#0f9488" : property.riskScore < 45 ? "#c47a22" : "#df6a3c";
@@ -485,7 +494,7 @@ function RiskAnalysis({ property }) {
       </div>
 
       <div className="grid gap-2 lg:grid-cols-3">
-        {property.risks.map((risk) => (
+        {risks.map((risk) => (
           <div
             key={risk}
             className="flex items-start gap-2 rounded-md border border-[rgba(223,106,60,0.18)] bg-[rgba(223,106,60,0.05)] p-3"
@@ -523,7 +532,7 @@ function MiniValue({ label, value }) {
   );
 }
 
-function ListBlock({ title, color, items }) {
+function ListBlock({ title, color, items = [] }) {
   return (
     <div className="rounded-md border border-[#e2ddd5] bg-[#f8f5ef] p-3">
       <p

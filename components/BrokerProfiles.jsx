@@ -13,11 +13,19 @@ export function BrokerProfiles() {
   const [profileBroker, setProfileBroker] = useState(null);
 
   useEffect(() => {
-    setSelectedBrokerId(window.localStorage.getItem(selectedBrokerStorageKey) || "");
+    try {
+      setSelectedBrokerId(window.localStorage.getItem(selectedBrokerStorageKey) || "");
+    } catch {
+      setSelectedBrokerId("");
+    }
   }, []);
 
   const selectBroker = (brokerId) => {
-    window.localStorage.setItem(selectedBrokerStorageKey, brokerId);
+    try {
+      window.localStorage.setItem(selectedBrokerStorageKey, brokerId);
+    } catch {
+      // Keep navigation working even if browser storage is disabled.
+    }
     setSelectedBrokerId(brokerId);
     router.push("/submit-property");
   };
@@ -101,7 +109,7 @@ function BrokerProfileModal({ broker, onClose }) {
         <div className="workspace-scroll max-h-[70vh] overflow-y-auto p-5">
           <div className="grid gap-3 sm:grid-cols-3">
             <Metric icon={Star} label="Rating" value={broker.rating} />
-            <Metric icon={BriefcaseBusiness} label="Experience" value={broker.experience} />
+            <Metric icon={BriefcaseBusiness} label="Experience" value={formatExperience(broker)} />
             <Metric label="Managed" value={`${broker.propertiesManaged} properties`} />
           </div>
 
@@ -111,8 +119,19 @@ function BrokerProfileModal({ broker, onClose }) {
           </section>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <section className="rounded-lg border border-[#e2ddd5] bg-[#fffdf9] p-4">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-teal">
+                Primary Territory
+              </p>
+              <p className="mt-2 text-[13px] font-bold text-ink">
+                {formatTerritory(broker)}
+              </p>
+              <p className="mt-1 text-[12px] text-muted">{broker.location}</p>
+            </section>
             <ListSection title="Service Areas" items={broker.serviceAreas} />
             <ListSection title="Specialties" items={broker.specialties} />
+            <ListSection title="Languages" items={broker.languages || []} />
+            <ListSection title="Recent Property Types" items={broker.recentPropertyTypes || []} />
             <ListSection title="Recent Properties" items={broker.recentProperties} />
             <section className="rounded-lg border border-[#e2ddd5] bg-[#fffdf9] p-4">
               <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-teal">
@@ -140,7 +159,7 @@ function Metric({ icon: Icon, label, value }) {
   );
 }
 
-function ListSection({ title, items }) {
+function ListSection({ title, items = [] }) {
   return (
     <section className="rounded-lg border border-[#e2ddd5] bg-[#fffdf9] p-4">
       <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-teal">
@@ -156,4 +175,12 @@ function ListSection({ title, items }) {
       </ul>
     </section>
   );
+}
+
+function formatExperience(broker) {
+  return broker.yearsExperience ? `${broker.yearsExperience} years` : broker.experience || "Pending";
+}
+
+function formatTerritory(broker) {
+  return [broker.district, broker.canton, broker.province].filter(Boolean).join(", ") || "Territory pending";
 }

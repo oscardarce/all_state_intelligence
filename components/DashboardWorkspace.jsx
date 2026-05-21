@@ -105,7 +105,7 @@ export function DashboardWorkspace() {
     setProperties((current) =>
       current.map((property) =>
         property.id === selectedProperty.id
-          ? { ...property, notes: [...property.notes, note] }
+          ? { ...property, notes: [...(property.notes || []), note] }
           : property
       )
     );

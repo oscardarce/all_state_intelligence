@@ -5,6 +5,9 @@ import { formatCurrency, formatNumber } from "@/lib/properties";
 
 export function PropertyAnalysisPanel({ property, comparables, onEdit }) {
   const riskAdjusted = Math.max(0, 100 - property.riskScore);
+  const tags = property.tags || [];
+  const nearbyServices = property.nearbyServices || [];
+  const comparableItems = comparables || [];
 
   return (
     <aside className="flex h-full min-w-0 flex-col overflow-hidden border-l border-[#e2ddd5] bg-[#fffdf9]">
@@ -32,7 +35,7 @@ export function PropertyAnalysisPanel({ property, comparables, onEdit }) {
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {property.tags.map((tag) => (
+          {tags.map((tag) => (
             <span
               key={tag}
               className="rounded-full bg-[#e9e3da] px-2.5 py-1 text-[10px] font-bold text-[#536176]"
@@ -91,7 +94,7 @@ export function PropertyAnalysisPanel({ property, comparables, onEdit }) {
 
         <Section title="Nearby Services">
           <div className="space-y-3">
-            {property.nearbyServices.map((service) => (
+            {nearbyServices.map((service) => (
               <div key={service.name} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-bold text-ink">{service.name}</p>
@@ -110,7 +113,7 @@ export function PropertyAnalysisPanel({ property, comparables, onEdit }) {
 
         <Section title="Comparable Properties">
           <div className="space-y-2">
-            {comparables.map((comparable) => (
+            {comparableItems.map((comparable) => (
               <div
                 key={comparable.id}
                 className="rounded-md border border-[#e4ded6] bg-[#f8f5ef] p-3"
